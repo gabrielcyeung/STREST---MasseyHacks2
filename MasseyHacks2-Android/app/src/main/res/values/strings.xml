@@ -1,7 +1,6 @@
 <resources>
-    <string name="app_name">Massey Hacks 2</string>
+    <string name="app_name">STREST</string>
 
-    <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="connect">Connect</string>
     <string name="status">Connection Status</string>
@@ -19,7 +18,7 @@
     <string name="muse_elem">Alpha Relative</string>
     <string name="muse_list">Available Muses</string>
 
-    <string name="permission_dialog_title">Muse Needs Your Permission</string>
-    <string name="permission_dialog_description">Muse needs a few permissions to work properly. On the next screens, tap "Allow" to proceed. If you deny, Muse will not work properly until you go into your Android settings and allow.</string>
+    <string name="permission_dialog_title">STREST Needs Your Permission</string>
+    <string name="permission_dialog_description">STREST needs a few permissions to work properly. On the next screens, tap "Allow" to proceed. If you deny, STREST will not work properly until you go into your Android settings and allow.</string>
     <string name="permission_dialog_understand">I Understand</string>
 </resources>

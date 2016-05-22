@@ -32,21 +32,21 @@
 
         <Button
             android:id="@+id/refresh"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/refresh" />
 
         <Button
             android:id="@+id/connect"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/connect" />
 
         <Button
             android:id="@+id/disconnect"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/disconnect" />
@@ -228,6 +228,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/heading_vertical_margin"
         android:textStyle="bold"
-        android:textSize="16sp" />
+        android:textSize="24sp" />
 
 </LinearLayout>
