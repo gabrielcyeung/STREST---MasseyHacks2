@@ -283,7 +283,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     public void onTick(long millisUntilFinished) {
                         TextView countdown = (TextView) findViewById(R.id.countdown);
-                        countdown.setText("seconds remaining: " + millisUntilFinished / 1000);
+                        countdown.setText("Calibration: " + (millisUntilFinished / 1000) + " seconds remaining");
                     }
 
                     public void onFinish() {
@@ -389,7 +389,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final ConnectionState current = p.getCurrentConnectionState();
 
         // Format a message to show the change of connection state in the UI.
-        final String status = p.getPreviousConnectionState() + " -> " + current;
+        //final String status = p.getPreviousConnectionState() + " -> " + current;
+        final String status = current.toString();
         Log.i(TAG, status);
 
         // Update the UI with the change in connection state.
