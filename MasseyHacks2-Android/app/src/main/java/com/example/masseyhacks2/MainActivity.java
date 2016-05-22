@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -45,6 +46,8 @@ import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+
+
 
 /**
  * This example will illustrate how to connect to a Muse headband,
@@ -256,6 +259,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 // Initiate a connection to the headband and stream the data asynchronously.
                 muse.runAsynchronously();
+
+                new CountDownTimer(30000, 1000) {
+
+                    public void onTick(long millisUntilFinished) {
+                        TextView countdown=(TextView)findViewById(R.id.countdown);
+                        countdown.setText("seconds remaining: " + millisUntilFinished / 1000);
+                    }
+
+                    public void onFinish() {
+                        TextView countdown=(TextView)findViewById(R.id.countdown);
+                        countdown.setText("program set!");
+                    }
+                }.start();
+
             }
 
         } else if (v.getId() == R.id.disconnect) {
