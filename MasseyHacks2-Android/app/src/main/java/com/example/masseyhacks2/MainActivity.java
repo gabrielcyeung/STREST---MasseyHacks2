@@ -2,9 +2,7 @@ package com.example.masseyhacks2;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -14,12 +12,9 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -145,6 +140,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private double averageEEG = 0;
 
     Range eegRange = new Range(1000000, -1000000);
+
 
 
 
@@ -290,14 +286,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 muse.unregisterAllListeners();
                 muse.registerConnectionListener(connectionListener);
                 muse.registerDataListener(dataListener, MuseDataPacketType.EEG);
-                muse.registerDataListener(dataListener, MuseDataPacketType.ALPHA_RELATIVE);
+/*                muse.registerDataListener(dataListener, MuseDataPacketType.ALPHA_RELATIVE);
                 muse.registerDataListener(dataListener, MuseDataPacketType.ACCELEROMETER);
                 muse.registerDataListener(dataListener, MuseDataPacketType.BATTERY);
                 muse.registerDataListener(dataListener, MuseDataPacketType.DRL_REF);
-                muse.registerDataListener(dataListener, MuseDataPacketType.QUANTIZATION);
+                muse.registerDataListener(dataListener, MuseDataPacketType.QUANTIZATION);*/
 
                 // Initiate a connection to the headband and stream the data asynchronously.
-                muse.runAsynchronously();
+                //muse.runAsynchronously();
+                muse.connect();
+                new CountDownTimer(1000000000, 100) {
+                    @Override
+                    public void onTick(long millisUntilFinished) {
+                        if (muse != null) {
+                            muse.execute();
+                        }
+                    }
+
+                    @Override
+                    public void onFinish() {}
+                }.start();
 
                 isAnalysisPhase = true;
 
@@ -306,6 +314,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void onTick(long millisUntilFinished) {
                         TextView countdown = (TextView) findViewById(R.id.countdown);
                         countdown.setText("Calibration: " + (millisUntilFinished / 1000) + " seconds remaining");
+
+                        if (muse == null) {
+                            cancel();
+                        }
                     }
 
                     public void onFinish() {
@@ -316,6 +328,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         TextView countdown = (TextView) findViewById(R.id.countdown);
                         countdown.setText("Calibration complete!" + "\n" + "Normal range: " + eegRange.low + " to " + eegRange.high);
+
+                        startMuseIntentService();
                     }
                 }.start();
             }
@@ -355,7 +369,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * not be discovered and a SecurityException will be thrown.
      */
     private void ensurePermissions() {
-
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
         {
@@ -527,17 +540,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 eegRange.low = average;
             }
 
-        } else {
+        } /*else {
             if (average > eegRange.high && !isStressCurrentlyDetected) {
                 isStressCurrentlyDetected = true;
                 Log.v(TAG, "getEegChannelValues(): isStressCurrentlyDetected = true");
 
 
-                /* TextView warningLabel = (TextView) findViewById(R.id.countdown);
+                *//* TextView warningLabel = (TextView) findViewById(R.id.countdown);
                    warningLabel.setText("Stress detected");
-                   warningLabel.setTextColor(Color.RED);*/
+                   warningLabel.setTextColor(Color.RED);*//*
                 //playWarningSound();
-                sendStressDetectedNotification();
+                //sendStressDetectedNotification();
 
                 new CountDownTimer(30000, 1000) {
                     public void onTick(long millisUntilFinished) {
@@ -560,10 +573,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }.start();
 
             }
-        }
+        }*/
     }
 
-    private void sendStressDetectedNotification() {
+/*    private void sendStressDetectedNotification() {
         android.support.v4.app.NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(getApplicationContext())
                         .setSmallIcon(R.mipmap.ic_launcher)
@@ -593,13 +606,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         // mId allows you to update the notification later on.
         mNotificationManager.notify(0, mBuilder.build());
-    }
+    }*/
 
-    private void cancelStressDetectedNotification() {
+/*    private void cancelStressDetectedNotification() {
         NotificationManager mNotificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         mNotificationManager.cancel(0);
-    }
+    }*/
 
     private void getAccelValues(MuseDataPacket p) {
         accelBuffer[0] = p.getAccelerometerValue(Accelerometer.FORWARD_BACKWARD);
@@ -838,8 +851,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }*/
 
     private void startMuseIntentService() {
+        Log.v(TAG, "startMuseIntentService()");
+
+        if (muse != null) {
+            muse.disconnect(true);
+        }
+
         Intent intent = new Intent(this, MuseIntentService.class);
-        //intent.setData(Uri.parse(dataUrl));
+        intent.putExtra(MuseIntentService.EEG_RANGE_LOW_INTENT_KEY, eegRange.low);
+        intent.putExtra(MuseIntentService.EEG_RANGE_HIGH_INTENT_KEY, eegRange.high);
         startService(intent);
     }
 
@@ -889,6 +909,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void receiveMuseArtifactPacket(final MuseArtifactPacket p, final Muse muse) {
             activityRef.get().receiveMuseArtifactPacket(p, muse);
+        }
+    }
+
+    // Broadcast receiver for receiving status updates from the IntentService
+    private class ResponseReceiver extends BroadcastReceiver {
+        // Prevents instantiation
+        private ResponseReceiver() {
+        }
+        // Called when the BroadcastReceiver gets an Intent it's registered to receive
+        public void onReceive(Context context, Intent intent) {
         }
     }
 
