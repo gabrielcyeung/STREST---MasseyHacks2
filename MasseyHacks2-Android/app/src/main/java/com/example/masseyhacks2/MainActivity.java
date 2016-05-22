@@ -266,7 +266,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 muse.disconnect(false);
             }
 
-        } else if (v.getId() == R.id.pause) {
+        } /*else if (v.getId() == R.id.pause) {
 
             // The user has pressed the "Pause/Resume" button to either pause or
             // resume data transmission.  Toggle the state and pause or resume the
@@ -275,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 dataTransmission = !dataTransmission;
                 muse.enableDataTransmission(dataTransmission);
             }
-        }
+        }*/
     }
 
     //--------------------------------------
@@ -361,7 +361,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 final TextView statusText = (TextView) findViewById(R.id.con_status);
                 statusText.setText(status);
 
-                final MuseVersion museVersion = muse.getMuseVersion();
+/*                final MuseVersion museVersion = muse.getMuseVersion();
                 final TextView museVersionText = (TextView) findViewById(R.id.version);
                 // If we haven't yet connected to the headband, the version information
                 // will be null.  You have to connect to the headband before either the
@@ -373,7 +373,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     museVersionText.setText(version);
                 } else {
                     museVersionText.setText(R.string.undefined);
-                }
+                }*/
             }
         });
 
@@ -472,8 +472,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         connectButton.setOnClickListener(this);
         Button disconnectButton = (Button) findViewById(R.id.disconnect);
         disconnectButton.setOnClickListener(this);
-        Button pauseButton = (Button) findViewById(R.id.pause);
-        pauseButton.setOnClickListener(this);
+/*        Button pauseButton = (Button) findViewById(R.id.pause);
+        pauseButton.setOnClickListener(this);*/
 
         spinnerAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item);
         Spinner musesSpinner = (Spinner) findViewById(R.id.muses_spinner);
