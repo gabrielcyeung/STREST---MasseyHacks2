@@ -11,9 +11,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Environment;
 import android.os.Handler;
-import android.os.Looper;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.TaskStackBuilder;
@@ -28,35 +26,23 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.choosemuse.libmuse.Accelerometer;
-import com.choosemuse.libmuse.AnnotationData;
 import com.choosemuse.libmuse.ConnectionState;
 import com.choosemuse.libmuse.Eeg;
 import com.choosemuse.libmuse.LibmuseVersion;
-import com.choosemuse.libmuse.MessageType;
 import com.choosemuse.libmuse.Muse;
 import com.choosemuse.libmuse.MuseArtifactPacket;
-import com.choosemuse.libmuse.MuseConfiguration;
 import com.choosemuse.libmuse.MuseConnectionListener;
 import com.choosemuse.libmuse.MuseConnectionPacket;
 import com.choosemuse.libmuse.MuseDataListener;
 import com.choosemuse.libmuse.MuseDataPacket;
 import com.choosemuse.libmuse.MuseDataPacketType;
-import com.choosemuse.libmuse.MuseFileFactory;
-import com.choosemuse.libmuse.MuseFileReader;
-import com.choosemuse.libmuse.MuseFileWriter;
 import com.choosemuse.libmuse.MuseListener;
 import com.choosemuse.libmuse.MuseManagerAndroid;
-import com.choosemuse.libmuse.MuseVersion;
-import com.choosemuse.libmuse.Result;
-import com.choosemuse.libmuse.ResultLevel;
 
-import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
-
-
+// Muse Example Code
 /**
  * This example will illustrate how to connect to a Muse headband,
  * register for and receive EEG data and disconnect from the headband.
@@ -81,7 +67,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final boolean DEBUG = true;
-    private static final Range debugEEGRange = new Range(100, 400);
+    // Example range (from calibration) used to produce a stress detection
+    private static final Range debugEEGRange = new Range(500, 800);
 
     /**
      * Tag used for logging purposes.
@@ -140,10 +127,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final double[] accelBuffer = new double[3];
     private boolean accelStale;
 
-    private double sumOfEEGValues = 0;
-    private int numberOfEEGValues = 0;
-    private double averageEEG = 0;
-
     Range eegRange = new Range(1000000, -1000000);
 
 
@@ -166,20 +149,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * It is possible to pause the data transmission from the headband.  This boolean tracks whether
      * or not the data transmission is enabled as we allow the user to pause transmission in the UI.
      */
-    private boolean dataTransmission = true;
+    //private boolean dataTransmission = true;
 
     /**
      * To save data to a file, you should use a MuseFileWriter.  The MuseFileWriter knows how to
      * serialize the data packets received from the headband into a compact binary format.
      * To read the file back, you would use a MuseFileReader.
      */
-    private final AtomicReference<MuseFileWriter> fileWriter = new AtomicReference<>();
+    //private final AtomicReference<MuseFileWriter> fileWriter = new AtomicReference<>();
 
     /**
      * We don't want file operations to slow down the UI, so we will defer those file operations
      * to a handler on a separate thread.
      */
-    private final AtomicReference<Handler> fileHandler = new AtomicReference<>();
+    //private final AtomicReference<Handler> fileHandler = new AtomicReference<>();
 
     private boolean isAnalysisPhase = false;
     private boolean isStressCurrentlyDetected = false;
@@ -196,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
 
-
+        // Notification test
 /*        onStressDetected();
 
         new CountDownTimer(10000, 10000) {
@@ -208,8 +191,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 onStressCompleted();
             }
         }.start();*/
-
-
 
 
         // We need to set the context on MuseManagerAndroid before we can do anything.
@@ -240,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // Start up a thread for asynchronous file operations.
         // This is only needed if you want to do File I/O.
-        fileThread.start();
+        //fileThread.start();
 
         // Start our asynchronous updates of the UI.
         handler.post(tickUi);
@@ -264,7 +245,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             manager.startListening();
 
         } else if (v.getId() == R.id.connect) {
-
             // The user has pressed the "Connect" button to connect to
             // the headband in the spinner.
 
@@ -280,7 +260,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (availableMuses.size() < 1 || musesSpinner.getAdapter().getCount() < 1) {
                 Log.w(TAG, "There is nothing to connect to");
             } else {
-
                 // Cache the Muse that the user has selected.
                 muse = availableMuses.get(musesSpinner.getSelectedItemPosition());
                 // Unregister all prior listeners and register our data listener to
@@ -292,9 +271,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 muse.registerDataListener(dataListener, MuseDataPacketType.EEG);
                 muse.registerDataListener(dataListener, MuseDataPacketType.ALPHA_RELATIVE);
                 muse.registerDataListener(dataListener, MuseDataPacketType.ACCELEROMETER);
-                muse.registerDataListener(dataListener, MuseDataPacketType.BATTERY);
+/*                muse.registerDataListener(dataListener, MuseDataPacketType.BATTERY);
                 muse.registerDataListener(dataListener, MuseDataPacketType.DRL_REF);
-                muse.registerDataListener(dataListener, MuseDataPacketType.QUANTIZATION);
+                muse.registerDataListener(dataListener, MuseDataPacketType.QUANTIZATION);*/
 
                 // Initiate a connection to the headband and stream the data asynchronously.
                 muse.runAsynchronously();
@@ -309,8 +288,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
 
                     public void onFinish() {
-                        averageEEG = sumOfEEGValues / numberOfEEGValues;
-                        eegRange = debugEEGRange;
+                        if (DEBUG) {
+                            eegRange = debugEEGRange;
+                        }
 
                         isAnalysisPhase = false;
 
@@ -442,7 +422,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (current == ConnectionState.DISCONNECTED) {
             Log.i(TAG, "Muse disconnected:" + muse.getName());
             // Save the data file once streaming has stopped.
-            saveFile();
+            //saveFile();
             // We have disconnected from the headband, so set our cached copy to null.
             this.muse = null;
         }
@@ -456,7 +436,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param muse  The headband that sent the information.
      */
     public void receiveMuseDataPacket(final MuseDataPacket p, final Muse muse) {
-        writeDataPacketToFile(p);
+        //writeDataPacketToFile(p);
 
         // valuesSize returns the number of data values contained in the packet.
         final long n = p.valuesSize();
@@ -518,9 +498,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final double average = sum / 6;
 
         if (isAnalysisPhase) {
-            sumOfEEGValues += average;
-            numberOfEEGValues++;
-
             if (average > eegRange.high) {
                 eegRange.high = average;
             } else if (average < eegRange.low) {
@@ -697,7 +674,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * We don't want to block the UI thread while we write to a file, so the file
      * writing is moved to a separate thread.
-     */
+     *//*
     private final Thread fileThread = new Thread() {
         @Override
         public void run() {
@@ -717,11 +694,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
-    /**
+    *//**
      * Writes the provided MuseDataPacket to the file.  MuseFileWriter knows
      * how to write all packet types generated from LibMuse.
      * @param p     The data packet to write.
-     */
+     *//*
     private void writeDataPacketToFile(final MuseDataPacket p) {
         Handler h = fileHandler.get();
         if (h != null) {
@@ -734,9 +711,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    /**
+    *//**
      * Flushes all the data to the file and closes the file writer.
-     */
+     *//*
     private void saveFile() {
         Handler h = fileHandler.get();
         if (h != null) {
@@ -755,12 +732,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    /**
+    *//**
      * Reads the provided .muse file and prints the data to the logcat.
-     * @param name  The name of the file to read.  The file in this example
-     *              is assumed to be in the Environment.DIRECTORY_DOWNLOADS
-     *              directory.
-     */
+     *//*
     private void playMuseFile(String name) {
 
         File dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
@@ -820,7 +794,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // Read the next message.
             res = fileReader.gotoNextMessage();
         }
-    }
+    }*/
 
 /*    private void playWarningSound() {
         final ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, ToneGenerator.MAX_VOLUME);
@@ -837,11 +811,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }.start();
     }*/
 
-    private void startMuseIntentService() {
-        Intent intent = new Intent(this, MuseIntentService.class);
-        //intent.setData(Uri.parse(dataUrl));
-        startService(intent);
-    }
 
     //--------------------------------------
     // Listener translators
