@@ -2,20 +2,24 @@ package com.example.masseyhacks2;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.media.AudioManager;
-import android.media.ToneGenerator;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -138,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private double sumOfEEGValues = 0;
     private int numberOfEEGValues = 0;
-    private double averageEEG=0;
+    private double averageEEG = 0;
 
     Range eegRange = new Range(1000000, -1000000);
 
@@ -178,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final AtomicReference<Handler> fileHandler = new AtomicReference<>();
 
     private boolean isAnalysisPhase = false;
-    private boolean stressDetected = false;
+    private boolean isStressCurrentlyDetected = false;
 
 
     //--------------------------------------
@@ -190,6 +194,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
+
+
+
+/*        onStressDetected();
+
+        new CountDownTimer(10000, 10000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                onStressCompleted();
+            }
+        }.start();*/
+
+
+
 
         // We need to set the context on MuseManagerAndroid before we can do anything.
         // This must come before other LibMuse API calls as it also loads the library.
@@ -278,7 +299,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // Initiate a connection to the headband and stream the data asynchronously.
                 muse.runAsynchronously();
 
-                isAnalysisPhase=true;
+                isAnalysisPhase = true;
 
                 new CountDownTimer(30000, 1000) {
 
@@ -290,10 +311,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void onFinish() {
                         averageEEG = sumOfEEGValues / numberOfEEGValues;
                         eegRange = debugEEGRange;
+
                         isAnalysisPhase = false;
 
                         TextView countdown = (TextView) findViewById(R.id.countdown);
-                        countdown.setText("Ready for detection! Normal range: " + eegRange.low + " to " + eegRange.high);
+                        countdown.setText("Calibration complete!" + "\n" + "Normal range: " + eegRange.low + " to " + eegRange.high);
                     }
                 }.start();
             }
@@ -386,7 +408,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param muse  The headband whose state changed.
      */
     public void receiveMuseConnectionPacket(final MuseConnectionPacket p, final Muse muse) {
-
         final ConnectionState current = p.getCurrentConnectionState();
 
         // Format a message to show the change of connection state in the UI.
@@ -470,8 +491,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param p     The artifact packet with the data from the headband.
      * @param muse  The headband that sent the information.
      */
-    public void receiveMuseArtifactPacket(final MuseArtifactPacket p, final Muse muse) {
-    }
+    public void receiveMuseArtifactPacket(final MuseArtifactPacket p, final Muse muse) {}
 
     /**
      * Helper methods to get different packet values.  These methods simply store the
@@ -495,7 +515,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         for (int a = 0; a <= 5; a++) {
             sum += buffer[a];
         }
-        double average = sum / 6;
+        final double average = sum / 6;
 
         if (isAnalysisPhase) {
             sumOfEEGValues += average;
@@ -508,32 +528,77 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
 
         } else {
-            if (average > eegRange.high && !stressDetected) {
-                stressDetected = true;
-                Log.v(TAG, "getEegChannelValues(): stressDetected = true");
+            if (average > eegRange.high && !isStressCurrentlyDetected) {
+                isStressCurrentlyDetected = true;
+                Log.v(TAG, "getEegChannelValues(): isStressCurrentlyDetected = true");
 
-                new CountDownTimer(5000, 1000000) {
 
-                    public void onTick(long millisUntilFinished) {}
+                /* TextView warningLabel = (TextView) findViewById(R.id.countdown);
+                   warningLabel.setText("Stress detected");
+                   warningLabel.setTextColor(Color.RED);*/
+                //playWarningSound();
+                sendStressDetectedNotification();
 
-                    public void onFinish() {
-                        TextView warningLabel = (TextView) findViewById(R.id.countdown);
-                        warningLabel.setText("Stress detected");
-                        warningLabel.setTextColor(Color.RED);
-                        playWarningSound();
+                new CountDownTimer(30000, 1000) {
+                    public void onTick(long millisUntilFinished) {
+                        if (average <= eegRange.high && isStressCurrentlyDetected) {
+                            isStressCurrentlyDetected = false;
+                            Log.v(TAG, "getEegChannelValues(): isStressCurrentlyDetected = false");
 
-                        new CountDownTimer(30000, 100000) {
-                            public void onTick(long millisUntilFinished) {}
-                            public void onFinish() {
-                                stressDetected = false;
-                                Log.v(TAG, "getEegChannelValues(): stressDetected = false");
-                            }
-                        }.start();
+                            cancelStressDetectedNotification();
+                        }
                     }
 
+                    public void onFinish() {
+                        if (isStressCurrentlyDetected) {
+                            isStressCurrentlyDetected = false;
+                            Log.v(TAG, "getEegChannelValues(): isStressCurrentlyDetected = false");
+
+                            cancelStressDetectedNotification();
+                        }
+                    }
                 }.start();
+
             }
         }
+    }
+
+    private void sendStressDetectedNotification() {
+        android.support.v4.app.NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(getApplicationContext())
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentTitle("Stress detected")
+                        .setContentText("Take a break, stand up, and walk around!")
+                        .setPriority(NotificationCompat.PRIORITY_MAX)
+                        .setCategory(Notification.CATEGORY_STATUS)
+                        .setSound(Settings.System.DEFAULT_NOTIFICATION_URI)
+                        .setOngoing(true);
+
+        // Creates an explicit intent for an Activity in your app
+        Intent resultIntent = new Intent(getApplicationContext(), MainActivity.class);
+
+        // The stack builder object will contain an artificial back stack for the
+        // started Activity.
+        // This ensures that navigating backward from the Activity leads out of
+        // your application to the Home screen.
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        // Adds the Intent that starts the Activity to the top of the stack
+        stackBuilder.addNextIntent(resultIntent);
+
+        PendingIntent resultPendingIntent =
+                stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
+        mBuilder.setContentIntent(resultPendingIntent);
+
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        // mId allows you to update the notification later on.
+        mNotificationManager.notify(0, mBuilder.build());
+    }
+
+    private void cancelStressDetectedNotification() {
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.cancel(0);
     }
 
     private void getAccelValues(MuseDataPacket p) {
@@ -757,7 +822,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void playWarningSound() {
+/*    private void playWarningSound() {
         final ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, ToneGenerator.MAX_VOLUME);
         toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 1000);
 
@@ -770,7 +835,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 toneGenerator.release();
             }
         }.start();
-    }
+    }*/
 
     private void startMuseIntentService() {
         Intent intent = new Intent(this, MuseIntentService.class);

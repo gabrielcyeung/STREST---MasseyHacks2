@@ -19,7 +19,5 @@ public class MuseIntentService extends IntentService {
     }
 
     @Override
-    protected void onHandleIntent(Intent intent) {
-
-    }
+    protected void onHandleIntent(Intent intent) {}
 }
