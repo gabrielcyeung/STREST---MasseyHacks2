@@ -4,6 +4,10 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.ToneGenerator;
+import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
@@ -11,7 +15,6 @@ import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -78,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * Tag used for logging purposes.
      */
-    private final String TAG = "TestLibMuseAndroid";
+    private final String TAG = "MasseyHacks2";
 
     /**
      * The MuseManager is how you detect Muse headbands and receive notifications
@@ -136,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int numberOfEEGValues = 0;
     private double averageEEG=0;
 
-    Range eegrange= new Range(1000000,-1000000);
+    Range eegRange = new Range(1000000, -1000000);
 
 
 
@@ -174,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final AtomicReference<Handler> fileHandler = new AtomicReference<>();
 
     private boolean isAnalysisPhase = false;
+    private boolean stressDetected = false;
 
 
     //--------------------------------------
@@ -278,23 +282,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 new CountDownTimer(30000, 1000) {
 
                     public void onTick(long millisUntilFinished) {
-                        TextView countdown=(TextView)findViewById(R.id.countdown);
+                        TextView countdown = (TextView) findViewById(R.id.countdown);
                         countdown.setText("seconds remaining: " + millisUntilFinished / 1000);
                     }
 
                     public void onFinish() {
-                        TextView countdown=(TextView)findViewById(R.id.countdown);
+                        averageEEG = sumOfEEGValues / numberOfEEGValues;
+                        eegRange = debugEEGRange;
+                        isAnalysisPhase = false;
 
-                        averageEEG=sumOfEEGValues/numberOfEEGValues;
-
-                        eegrange=debugEEGRange;
-                        countdown.setText("program set!"+ eegrange.low + " "+ eegrange.high);
-                        isAnalysisPhase=false;
+                        TextView countdown = (TextView) findViewById(R.id.countdown);
+                        countdown.setText("Ready for detection! Normal range: " + eegRange.low + " to " + eegRange.high);
                     }
                 }.start();
-
-
-
             }
 
         } else if (v.getId() == R.id.disconnect) {
@@ -489,19 +489,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buffer[4] = p.getEegChannelValue(Eeg.AUX_LEFT);
         buffer[5] = p.getEegChannelValue(Eeg.AUX_RIGHT);
 
-        if (isAnalysisPhase==true) {
-            double sum = 0;
-            for (int a = 0; a <= 5; a++) {
-                sum += buffer[a];
-            }
-            sum = sum / 6;
-            sumOfEEGValues += sum;
+        double sum = 0;
+        for (int a = 0; a <= 5; a++) {
+            sum += buffer[a];
+        }
+        double average = sum / 6;
+
+        if (isAnalysisPhase) {
+            sumOfEEGValues += average;
             numberOfEEGValues++;
 
-            if (sum > eegrange.high) {
-                eegrange.high = sum;
-            } else if (sum < eegrange.low) {
-                eegrange.low = sum;
+            if (average > eegRange.high) {
+                eegRange.high = average;
+            } else if (average < eegRange.low) {
+                eegRange.low = average;
+            }
+
+        } else {
+            if (average > eegRange.high && !stressDetected) {
+                stressDetected = true;
+                Log.v(TAG, "getEegChannelValues(): stressDetected = true");
+
+                new CountDownTimer(5000, 1000000) {
+
+                    public void onTick(long millisUntilFinished) {}
+
+                    public void onFinish() {
+                        TextView warningLabel = (TextView) findViewById(R.id.countdown);
+                        warningLabel.setText("Stress detected");
+                        warningLabel.setTextColor(Color.RED);
+                        playWarningSound();
+
+                        new CountDownTimer(30000, 100000) {
+                            public void onTick(long millisUntilFinished) {}
+                            public void onFinish() {
+                                stressDetected = false;
+                                Log.v(TAG, "getEegChannelValues(): stressDetected = false");
+                            }
+                        }.start();
+                    }
+
+                }.start();
             }
         }
     }
@@ -727,6 +755,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void playWarningSound() {
+        final ToneGenerator toneGenerator = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, ToneGenerator.MAX_VOLUME);
+        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 1000);
+
+        new CountDownTimer(1000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                toneGenerator.release();
+            }
+        }.start();
+    }
+
     //--------------------------------------
     // Listener translators
     //
@@ -775,4 +818,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             activityRef.get().receiveMuseArtifactPacket(p, muse);
         }
     }
+
 }
