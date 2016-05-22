@@ -72,6 +72,9 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private static final boolean DEBUG = true;
+    private static final Range debugEEGRange = new Range(100, 400);
+
     /**
      * Tag used for logging purposes.
      */
@@ -129,6 +132,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final double[] accelBuffer = new double[3];
     private boolean accelStale;
 
+    private double sumOfEEGValues = 0;
+    private int numberOfEEGValues = 0;
+    private double averageEEG=0;
+
+    Range eegrange= new Range(1000000,-1000000);
+
+
+
     /**
      * We will be updating the UI using a handler instead of in packet handlers because
      * packets come in at a very high frequency and it only makes sense to update the UI
@@ -161,6 +172,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * to a handler on a separate thread.
      */
     private final AtomicReference<Handler> fileHandler = new AtomicReference<>();
+
+    private boolean isAnalysisPhase = false;
 
 
     //--------------------------------------
@@ -260,6 +273,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // Initiate a connection to the headband and stream the data asynchronously.
                 muse.runAsynchronously();
 
+                isAnalysisPhase=true;
+
                 new CountDownTimer(30000, 1000) {
 
                     public void onTick(long millisUntilFinished) {
@@ -269,9 +284,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     public void onFinish() {
                         TextView countdown=(TextView)findViewById(R.id.countdown);
-                        countdown.setText("program set!");
+
+                        averageEEG=sumOfEEGValues/numberOfEEGValues;
+
+                        eegrange=debugEEGRange;
+                        countdown.setText("program set!"+ eegrange.low + " "+ eegrange.high);
+                        isAnalysisPhase=false;
                     }
                 }.start();
+
+
 
             }
 
@@ -466,6 +488,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buffer[3] = p.getEegChannelValue(Eeg.EEG4);
         buffer[4] = p.getEegChannelValue(Eeg.AUX_LEFT);
         buffer[5] = p.getEegChannelValue(Eeg.AUX_RIGHT);
+
+        if (isAnalysisPhase==true) {
+            double sum = 0;
+            for (int a = 0; a <= 5; a++) {
+                sum += buffer[a];
+            }
+            sum = sum / 6;
+            sumOfEEGValues += sum;
+            numberOfEEGValues++;
+
+            if (sum > eegrange.high) {
+                eegrange.high = sum;
+            } else if (sum < eegrange.low) {
+                eegrange.low = sum;
+            }
+        }
     }
 
     private void getAccelValues(MuseDataPacket p) {
