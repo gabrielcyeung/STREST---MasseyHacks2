@@ -3,6 +3,7 @@ package com.example.masseyhacks2;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.AudioManager;
@@ -195,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         manager = MuseManagerAndroid.getInstance();
         manager.setContext(this);
 
-        Log.i(TAG, "LibMuse version=" + LibmuseVersion.instance().getString());
+        Log.i(TAG, "LibMuse version = " + LibmuseVersion.instance().getString());
 
         WeakReference<MainActivity> weakActivity =
                 new WeakReference<MainActivity>(this);
@@ -769,6 +770,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 toneGenerator.release();
             }
         }.start();
+    }
+
+    private void startMuseIntentService() {
+        Intent intent = new Intent(this, MuseIntentService.class);
+        //intent.setData(Uri.parse(dataUrl));
+        startService(intent);
     }
 
     //--------------------------------------
